@@ -1,9 +1,9 @@
-name: Plasmodium berghei ApiAP2 Mutant
+name: P. berghei mApiAP2
 output_dir: "../docs"
 include: [".nojekyll"]
 exclude: ["include"]
 navbar:
-  title: Plasmodium berghei ApiAP2 Mutant
+  title: P. berghei mApiAP2
   left:
     - text: "Home"
       href: index.html
@@ -18,7 +18,7 @@ output:
   html_document:
     toc: true
     toc_float: true
-    theme: cosmo
+    theme: yeti
     highlight: textmate
     include:
       after_body: include/footer.html
