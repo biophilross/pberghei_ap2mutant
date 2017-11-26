@@ -1,0 +1,169 @@
+---
+title: "Motif analysis"
+author: "Philipp Ross"
+date: 2017-11-13
+output: html_document
+---
+
+<!-- The file analysis/chunks.R contains chunks that define default settings
+shared across the workflowr files. -->
+```{r read-chunk, include=FALSE, cache=FALSE}
+knitr::read_chunk("chunks.R")
+```
+
+<!-- Update knitr chunk options -->
+```{r knitr-opts-chunk, include=FALSE}
+```
+
+<!-- Insert the date the file was last updated -->
+```{r last-updated, echo=FALSE, results='asis'}
+```
+
+<!-- Insert the code version (Git commit SHA1) if Git repository exists and R
+ package git2r is installed -->
+```{r code-version, echo=FALSE, results='asis'}
+```
+
+## Overview
+
+## Preperation
+
+What is the genome composition of *P. berghei*? The following command got me the result seen below:
+
+```{r, engine="bash",eval=F}
+$ seqtk comp PlasmoDB-34_PbergheiANKA_Genome.fasta | awk 'BEGIN {l=0;A=0;C=0;G=0;T=0} {l=l+$2;A=A+$3;C=C+$4;G=G+$5;T=T+$6} END {print "A: "A/l" C: "C/l" G: "G/l" T: "T/l}'
+
+A: 0.390528 C: 0.110397 G: 0.110028 T: 0.389048
+```
+
+Now let's set promoter regions for all the genes we care about. First, we'll import all genes, filter them, and create lists of genes we want to explore further.
+
+```{r}
+gff <- rtracklayer::import.gff3("../data/PlasmoDB-34_PbergheiANKA.gff")
+nuclear_chromosomes <- c("PbANKA_01_v3","PbANKA_02_v3","PbANKA_03_v3","PbANKA_04_v3",
+                         "PbANKA_05_v3","PbANKA_06_v3","PbANKA_07_v3","PbANKA_08_v3",
+                         "PbANKA_09_v3","PbANKA_10_v3","PbANKA_11_v3","PbANKA_12_v3",
+                         "PbANKA_13_v3","PbANKA_14_v3", "PbANKA_00_v3_archived_contig_1",
+                         "PbANKA_00_v3_archived_contig_2", "PbANKA_00_v3_archived_contig_3",
+                         "PbANKA_00_v3_archived_contig_4", "PbANKA_00_v3_archived_contig_5")
+protein_coding_genes <- unique(
+  unlist(
+    lapply(
+      stringr::str_split(
+        dplyr::filter(
+          tibble::as_tibble(gff),type=="CDS",seqnames %in% nuclear_chromosomes)$ID,pattern="[.]"),function(x) x[1])))
+genes <- GenomicRanges::GRanges(dplyr::filter(tibble::as_tibble(gff), type=="gene", ID %in% protein_coding_genes))
+```
+
+Now we'll get promoter intervals:
+
+```{r}
+proms <- tibble::as_tibble(GenomicRanges::promoters(genes,upstream=1500,downstream=0))
+proms$score <- 1
+proms$start <- proms$start - 1
+proms$start <- ifelse(proms$start<0,0,proms$start)
+proms <- dplyr::select(proms,seqnames,start,end,ID,score,strand)
+proms <- dplyr::rename(proms,name=ID)
+proms$start <- as.integer(proms$start)
+readr::write_tsv(x=proms,path="../data/promoters_1500bps.bed",col_names=F)
+```
+
+Now use bedtools to generate strand-specific sequences:
+
+```{r,engine='bash',eval=F}
+bedtools getfasta -fi PlasmoDB-34_PbergheiANKA_Genome.fasta -bed promoters_1500bps.bed -s -name > promoters_1500bps.fasta
+```
+
+Unfortunately, I get the following error messages:
+
+```{r,engine='bash',eval=F}
+Feature (PbANKA_01_v3:515305-516805) beyond the length of PbANKA_01_v3 size (515659 bp).  Skipping.
+Feature (PbANKA_10_v3:1639716-1641216) beyond the length of PbANKA_10_v3 size (1640193 bp).  Skipping.
+Feature (PbANKA_02_v3:621636-623136) beyond the length of PbANKA_02_v3 size (622508 bp).  Skipping.
+Feature (PbANKA_06_v3:983178-984678) beyond the length of PbANKA_06_v3 size (984266 bp).  Skipping.
+Feature (PbANKA_05_v3:930418-931918) beyond the length of PbANKA_05_v3 size (931174 bp).  Skipping.
+```
+
+I manually went back to correct these features in the original BED file and reran the previous command:
+
+```{r,engine='bash',eval=F}
+bedtools getfasta -fi PlasmoDB-34_PbergheiANKA_Genome.fasta -bed promoters_1500bps_corrected.bed -s -name > promoters_1500bps_corrected.fasta
+```
+
+No warnings this time!
+
+Finally, we can generate background models for these sequences:
+
+```{r,engine='bash',eval=F}
+cat promoters_1500bps_corrected.fasta | fasta-get-markov -m 4 > promoters_1500bps_corrected.background
+```
+
+Finally, we can search the sequences.
+
+## Search sequences
+
+We'll use FIMO to search the promoter sequences:
+
+```{r, engine='bash',eval=F}
+fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_genomic_1e4 --parse-genomic-coord --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta 
+
+fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_1e4 --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta 
+
+fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_genomic_1e3 --parse-genomic-coord --thresh 1e-3 8mer_motifs.meme promoters_1500bps_corrected.fasta 
+
+fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_1e3 --thresh 1e-3 8mer_motifs.meme promoters_1500bps_corrected.fasta 
+```
+
+Now we can look at our genes of interest to see if there are any differences between the two motifs:
+
+```{r}
+# import differentially expressed gene list
+diff_reg <- readr::read_tsv("../data/differentially_regulated.txt",col_names=F)$X1
+# remove ribosomal RNA
+diff_reg <- diff_reg[diff_reg %nin% "PBANKA_0622941"]
+#read in FIMO motif hits
+fimo <- readr::read_tsv("../data/fimo_promoters_1500_1e3/fimo.txt",col_names=T)
+fimo <- dplyr::rename(fimo, pattern=`#pattern name`,seq=`sequence name`,matched=`matched sequence`)
+fimo$seq <- unlist(lapply(stringr::str_split(string=fimo$seq,pattern="[::]"),function(x) x[1]))
+# filter for hits within the genes we care about
+fimo_diff_reg <- dplyr::filter(fimo, seq %in% diff_reg)
+```
+
+Now let's compare the hits within the promoters of our genes of interest to the amount of motifs found in promoters throughout the rest of the genome:
+
+```{r}
+# make a histogram of the data
+hist(table(fimo$seq),breaks=20,col="grey",main="Motif Hits Per Promoter",xlab="Hits")
+abline(v=mean(table(fimo$seq)),col="green",lwd=2)
+abline(v=mean(table(fimo_diff_reg$seq)),col="blue",lwd=2)
+abline(v=max(table(fimo_diff_reg$seq)),col="red",lwd=2)
+```
+
+Here, **green** is the average number of hits within the distribution, **blue** is the average number of hits within the differentially regulated genes, and **red** is the gene with the maximum number of motif hits within the differentially expressed gene set.
+
+Let's save that to a file.
+
+```{r}
+# show data and write it to a file
+fimo_diff_reg
+readr::write_tsv(x=fimo_diff_reg,path="../data/fimo_differentially_expressed.tsv")
+```
+
+## How does this compare to some kind of background?
+
+```{r}
+# sample from our genes to compare to our differentially expressed set of genes
+rt <- tibble::tibble(Var1=character(),n=integer())
+for (i in 1:1000) {
+  s <- sample(x=protein_coding_genes[protein_coding_genes %nin% diff_reg],size=45,replace=F)
+  t <- dplyr::filter(fimo, seq %in% s)
+  rt <- dplyr::bind_rows(rt,tibble::as_tibble(table(t$pattern)))
+}
+ggplot(rt,aes(x=Var1,y=n)) + geom_boxplot() + geom_hline(yintercept=135,col="blue") + geom_hline(yintercept=139,col="red")
+```
+
+## Session information
+
+<!-- Insert the session information into the document -->
+```{r session-info}
+```
