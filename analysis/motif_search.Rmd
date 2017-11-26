@@ -24,6 +24,14 @@ knitr::read_chunk("chunks.R")
 ```{r code-version, echo=FALSE, results='asis'}
 ```
 
+<!-- packages -->
+```{r packages, echo=FALSE, include=FALSE}
+```
+
+<!-- custom defined functions -->
+```{r custom-functions, echo=FALSE}
+```
+
 ## Overview
 
 ## Preperation
@@ -120,7 +128,7 @@ Now we can look at our genes of interest to see if there are any differences bet
 # import differentially expressed gene list
 diff_reg <- readr::read_tsv("../data/differentially_regulated.txt",col_names=F)$X1
 # remove ribosomal RNA
-diff_reg <- diff_reg[diff_reg %nin% "PBANKA_0622941"]
+diff_reg <- diff_reg[!diff_reg %in% "PBANKA_0622941"]
 #read in FIMO motif hits
 fimo <- readr::read_tsv("../data/fimo_promoters_1500_1e3/fimo.txt",col_names=T)
 fimo <- dplyr::rename(fimo, pattern=`#pattern name`,seq=`sequence name`,matched=`matched sequence`)
@@ -155,10 +163,11 @@ readr::write_tsv(x=fimo_diff_reg,path="../data/fimo_differentially_expressed.tsv
 # sample from our genes to compare to our differentially expressed set of genes
 rt <- tibble::tibble(Var1=character(),n=integer())
 for (i in 1:1000) {
-  s <- sample(x=protein_coding_genes[protein_coding_genes %nin% diff_reg],size=45,replace=F)
+  s <- sample(x=protein_coding_genes[!protein_coding_genes %in% diff_reg],size=45,replace=F)
   t <- dplyr::filter(fimo, seq %in% s)
   rt <- dplyr::bind_rows(rt,tibble::as_tibble(table(t$pattern)))
 }
+
 ggplot(rt,aes(x=Var1,y=n)) + geom_boxplot() + geom_hline(yintercept=135,col="blue") + geom_hline(yintercept=139,col="red")
 ```
 

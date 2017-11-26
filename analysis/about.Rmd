@@ -5,4 +5,4 @@ output:
     toc: false
 ---
 
-Describe your project.
+Motif analysis of a polymorphic ApiAP2 protein.
