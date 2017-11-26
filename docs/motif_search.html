@@ -17,7 +17,7 @@
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<link href="site_libs/bootstrap-3.3.5/css/yeti.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
 <script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
 <script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
@@ -105,34 +105,34 @@ button.code-folding-btn:focus {
 <style type="text/css">
 /* padding for bootstrap navbar */
 body {
-  padding-top: 51px;
+  padding-top: 45px;
   padding-bottom: 40px;
 }
 /* offset scroll position for anchor links (for fixed navbar)  */
 .section h1 {
-  padding-top: 56px;
-  margin-top: -56px;
+  padding-top: 50px;
+  margin-top: -50px;
 }
 
 .section h2 {
-  padding-top: 56px;
-  margin-top: -56px;
+  padding-top: 50px;
+  margin-top: -50px;
 }
 .section h3 {
-  padding-top: 56px;
-  margin-top: -56px;
+  padding-top: 50px;
+  margin-top: -50px;
 }
 .section h4 {
-  padding-top: 56px;
-  margin-top: -56px;
+  padding-top: 50px;
+  margin-top: -50px;
 }
 .section h5 {
-  padding-top: 56px;
-  margin-top: -56px;
+  padding-top: 50px;
+  margin-top: -50px;
 }
 .section h6 {
-  padding-top: 56px;
-  margin-top: -56px;
+  padding-top: 50px;
+  margin-top: -50px;
 }
 </style>
 
@@ -274,7 +274,7 @@ div.tocify {
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="index.html">Plasmodium berghei ApiAP2 Mutant</a>
+      <a class="navbar-brand" href="index.html">P. berghei mApiAP2</a>
     </div>
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
@@ -315,12 +315,14 @@ div.tocify {
 shared across the workflowr files. -->
 <!-- Update knitr chunk options -->
 <!-- Insert the date the file was last updated -->
-<pre><code>Warning in as.POSIXlt.POSIXct(Sys.time()): unknown timezone &#39;default/
-America/Chicago&#39;</code></pre>
-<p><strong>Last updated:</strong> 2017-11-20</p>
+<pre><code>Warning in as.POSIXlt.POSIXct(Sys.time()): unknown timezone &#39;zone/tz/2017c.
+1.0/zoneinfo/America/Chicago&#39;</code></pre>
+<p><strong>Last updated:</strong> 2017-11-26</p>
 <!-- Insert the code version (Git commit SHA1) if Git repository exists and R
  package git2r is installed -->
-<p><strong>Code version:</strong> b4ffee6</p>
+<p><strong>Code version:</strong> 3e53bad</p>
+<!-- packages -->
+<!-- custom defined functions -->
 <div id="overview" class="section level2">
 <h2>Overview</h2>
 </div>
@@ -340,7 +342,9 @@ invalid class &quot;MulticoreParam&quot; object: 2: &#39;.clusterargs&#39;, &#39
 <pre class="r"><code>nuclear_chromosomes &lt;- c(&quot;PbANKA_01_v3&quot;,&quot;PbANKA_02_v3&quot;,&quot;PbANKA_03_v3&quot;,&quot;PbANKA_04_v3&quot;,
                          &quot;PbANKA_05_v3&quot;,&quot;PbANKA_06_v3&quot;,&quot;PbANKA_07_v3&quot;,&quot;PbANKA_08_v3&quot;,
                          &quot;PbANKA_09_v3&quot;,&quot;PbANKA_10_v3&quot;,&quot;PbANKA_11_v3&quot;,&quot;PbANKA_12_v3&quot;,
-                         &quot;PbANKA_13_v3&quot;,&quot;PbANKA_14_v3&quot;)
+                         &quot;PbANKA_13_v3&quot;,&quot;PbANKA_14_v3&quot;, &quot;PbANKA_00_v3_archived_contig_1&quot;,
+                         &quot;PbANKA_00_v3_archived_contig_2&quot;, &quot;PbANKA_00_v3_archived_contig_3&quot;,
+                         &quot;PbANKA_00_v3_archived_contig_4&quot;, &quot;PbANKA_00_v3_archived_contig_5&quot;)
 protein_coding_genes &lt;- unique(
   unlist(
     lapply(
@@ -358,6 +362,7 @@ proms$start &lt;- proms$start - 1
 proms$start &lt;- ifelse(proms$start&lt;0,0,proms$start)
 proms &lt;- dplyr::select(proms,seqnames,start,end,ID,score,strand)
 proms &lt;- dplyr::rename(proms,name=ID)
+proms$start &lt;- as.integer(proms$start)
 readr::write_tsv(x=proms,path=&quot;../data/promoters_1500bps.bed&quot;,col_names=F)</code></pre>
 <p>Now use bedtools to generate strand-specific sequences:</p>
 <pre class="bash"><code>bedtools getfasta -fi PlasmoDB-34_PbergheiANKA_Genome.fasta -bed promoters_1500bps.bed -s -name &gt; promoters_1500bps.fasta</code></pre>
@@ -377,16 +382,24 @@ Feature (PbANKA_05_v3:930418-931918) beyond the length of PbANKA_05_v3 size (931
 <div id="search-sequences" class="section level2">
 <h2>Search sequences</h2>
 <p>We’ll use FIMO to search the promoter sequences:</p>
-<pre class="bash"><code>fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_genomic --parse-genomic-coord --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta 
+<pre class="bash"><code>fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_genomic_1e4 --parse-genomic-coord --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta 
 
-fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500 --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta </code></pre>
+fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_1e4 --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta 
+
+fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_genomic_1e3 --parse-genomic-coord --thresh 1e-3 8mer_motifs.meme promoters_1500bps_corrected.fasta 
+
+fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_1e3 --thresh 1e-3 8mer_motifs.meme promoters_1500bps_corrected.fasta </code></pre>
 <p>Now we can look at our genes of interest to see if there are any differences between the two motifs:</p>
-<pre class="r"><code>diff_reg &lt;- readr::read_tsv(&quot;../data/differentially_regulated.txt&quot;,col_names=F)$X1</code></pre>
+<pre class="r"><code># import differentially expressed gene list
+diff_reg &lt;- readr::read_tsv(&quot;../data/differentially_regulated.txt&quot;,col_names=F)$X1</code></pre>
 <pre><code>Parsed with column specification:
 cols(
   X1 = col_character()
 )</code></pre>
-<pre class="r"><code>fimo &lt;- readr::read_tsv(&quot;../data/fimo_promoters_1500/fimo.txt&quot;,col_names=T)</code></pre>
+<pre class="r"><code># remove ribosomal RNA
+diff_reg &lt;- diff_reg[!diff_reg %in% &quot;PBANKA_0622941&quot;]
+#read in FIMO motif hits
+fimo &lt;- readr::read_tsv(&quot;../data/fimo_promoters_1500_1e3/fimo.txt&quot;,col_names=T)</code></pre>
 <pre><code>Parsed with column specification:
 cols(
   `#pattern name` = col_character(),
@@ -401,33 +414,47 @@ cols(
 )</code></pre>
 <pre class="r"><code>fimo &lt;- dplyr::rename(fimo, pattern=`#pattern name`,seq=`sequence name`,matched=`matched sequence`)
 fimo$seq &lt;- unlist(lapply(stringr::str_split(string=fimo$seq,pattern=&quot;[::]&quot;),function(x) x[1]))
-
+# filter for hits within the genes we care about
 fimo_diff_reg &lt;- dplyr::filter(fimo, seq %in% diff_reg)</code></pre>
-<p>If we choose to analyze the data this way, out of the 46 reported differentially expressed genes, we only find hits in 19 promoters for both motifs, combined:</p>
-<pre class="r"><code>fimo_diff_reg</code></pre>
-<pre><code># A tibble: 19 x 9
-    pattern            seq start  stop strand    score `p-value` `q-value`
-      &lt;chr&gt;          &lt;chr&gt; &lt;int&gt; &lt;int&gt;  &lt;chr&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
- 1 GGGACTTA PBANKA_1200091   185   192      - 14.60820  9.29e-06     0.439
- 2 GGGACTTA PBANKA_0722700   247   254      + 14.54640  1.01e-05     0.439
- 3 GGGACTTA PBANKA_0836800   214   221      - 13.94850  1.20e-05     0.439
- 4 GGGCTTAA PBANKA_0200500   732   739      + 13.67350  1.31e-05     0.550
- 5 GGGACTTA PBANKA_0100021   232   239      + 11.92780  1.37e-05     0.439
- 6 GGGACTTA PBANKA_0317161   882   889      + 11.92780  1.37e-05     0.439
- 7 GGGACTTA PBANKA_0943900   297   304      - 11.36080  1.96e-05     0.475
- 8 GGGACTTA PBANKA_1040521   497   504      + 10.34020  2.99e-05     0.575
- 9 GGGCTTAA PBANKA_0100021   233   240      + 11.52040  3.42e-05     0.655
-10 GGGCTTAA PBANKA_0700041   768   775      + 11.51020  3.73e-05     0.655
-11 GGGACTTA PBANKA_1465100   243   250      +  9.53608  5.44e-05     0.734
-12 GGGCTTAA PBANKA_1465100   244   251      + 10.91840  5.70e-05     0.755
-13 GGGCTTAA PBANKA_0215800   441   448      + 10.29590  7.09e-05     0.755
-14 GGGCTTAA PBANKA_0944061    39    46      + 10.14290  8.60e-05     0.779
-15 GGGCTTAA PBANKA_1200091   451   458      + 10.14290  8.60e-05     0.779
-16 GGGACTTA PBANKA_0317161  1277  1284      -  9.07216  8.71e-05     0.976
-17 GGGCTTAA PBANKA_0500950   351   358      + 10.12240  9.73e-05     0.779
-18 GGGCTTAA PBANKA_0216000   383   390      + 10.12240  9.73e-05     0.779
-19 GGGCTTAA PBANKA_0943900   398   405      + 10.12240  9.73e-05     0.779
-# ... with 1 more variables: matched &lt;chr&gt;</code></pre>
+<p>Now let’s compare the hits within the promoters of our genes of interest to the amount of motifs found in promoters throughout the rest of the genome:</p>
+<pre class="r"><code># make a histogram of the data
+hist(table(fimo$seq),breaks=20,col=&quot;grey&quot;,main=&quot;Motif Hits Per Promoter&quot;,xlab=&quot;Hits&quot;)
+abline(v=mean(table(fimo$seq)),col=&quot;green&quot;,lwd=2)
+abline(v=mean(table(fimo_diff_reg$seq)),col=&quot;blue&quot;,lwd=2)
+abline(v=max(table(fimo_diff_reg$seq)),col=&quot;red&quot;,lwd=2)</code></pre>
+<p><img src="figure/motif_search.Rmd/unnamed-chunk-10-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Here, <strong>green</strong> is the average number of hits within the distribution, <strong>blue</strong> is the average number of hits within the differentially regulated genes, and <strong>red</strong> is the gene with the maximum number of motif hits within the differentially expressed gene set.</p>
+<p>Let’s save that to a file.</p>
+<pre class="r"><code># show data and write it to a file
+fimo_diff_reg</code></pre>
+<pre><code># A tibble: 274 x 9
+    pattern            seq start  stop strand   score `p-value` `q-value`
+      &lt;chr&gt;          &lt;chr&gt; &lt;int&gt; &lt;int&gt;  &lt;chr&gt;   &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+ 1 GGGACTTA PBANKA_0722700   247   254      + 14.8041  5.97e-06     0.387
+ 2 GGGACTTA PBANKA_1200091   185   192      - 14.7938  8.65e-06     0.387
+ 3 GGGACTTA PBANKA_0836800   214   221      - 14.2165  1.04e-05     0.387
+ 4 GGGCTTAA PBANKA_0200500   732   739      + 14.0206  1.13e-05     0.468
+ 5 GGGACTTA PBANKA_0100021   232   239      + 12.1959  1.17e-05     0.387
+ 6 GGGACTTA PBANKA_0317161   882   889      + 12.1959  1.17e-05     0.387
+ 7 GGGACTTA PBANKA_0943900   297   304      - 11.6186  1.41e-05     0.400
+ 8 GGGACTTA PBANKA_1040521   497   504      + 10.5361  2.62e-05     0.523
+ 9 GGGCTTAA PBANKA_0100021   233   240      + 11.7113  3.00e-05     0.576
+10 GGGCTTAA PBANKA_0700041   768   775      + 11.7010  3.27e-05     0.576
+# ... with 264 more rows, and 1 more variables: matched &lt;chr&gt;</code></pre>
+<pre class="r"><code>readr::write_tsv(x=fimo_diff_reg,path=&quot;../data/fimo_differentially_expressed.tsv&quot;)</code></pre>
+</div>
+<div id="how-does-this-compare-to-some-kind-of-background" class="section level2">
+<h2>How does this compare to some kind of background?</h2>
+<pre class="r"><code># sample from our genes to compare to our differentially expressed set of genes
+rt &lt;- tibble::tibble(Var1=character(),n=integer())
+for (i in 1:1000) {
+  s &lt;- sample(x=protein_coding_genes[!protein_coding_genes %in% diff_reg],size=45,replace=F)
+  t &lt;- dplyr::filter(fimo, seq %in% s)
+  rt &lt;- dplyr::bind_rows(rt,tibble::as_tibble(table(t$pattern)))
+}
+
+ggplot(rt,aes(x=Var1,y=n)) + geom_boxplot() + geom_hline(yintercept=135,col=&quot;blue&quot;) + geom_hline(yintercept=139,col=&quot;red&quot;)</code></pre>
+<p><img src="figure/motif_search.Rmd/unnamed-chunk-12-1.png" width="672" style="display: block; margin: auto;" /></p>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session information</h2>
@@ -448,33 +475,36 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] bindrcpp_0.2
+[1] bindrcpp_0.2  cowplot_0.8.0 ggplot2_2.2.1
 
 loaded via a namespace (and not attached):
- [1] Rcpp_0.12.13               compiler_3.4.2            
- [3] git2r_0.19.0               GenomeInfoDb_1.10.3       
- [5] XVector_0.14.1             bindr_0.1                 
- [7] bitops_1.0-6               tools_3.4.2               
- [9] zlibbioc_1.20.0            digest_0.6.12             
-[11] evaluate_0.10.1            tibble_1.3.4              
-[13] lattice_0.20-35            pkgconfig_2.0.1           
-[15] rlang_0.1.4                Matrix_1.2-11             
-[17] yaml_2.1.14                parallel_3.4.2            
-[19] rtracklayer_1.34.2         stringr_1.2.0             
-[21] dplyr_0.7.4                knitr_1.17                
-[23] hms_0.3                    Biostrings_2.42.1         
-[25] S4Vectors_0.12.2           IRanges_2.8.2             
-[27] stats4_3.4.2               rprojroot_1.2             
-[29] grid_3.4.2                 glue_1.2.0                
-[31] Biobase_2.34.0             R6_2.2.2                  
-[33] XML_3.98-1.9               BiocParallel_1.8.2        
-[35] rmarkdown_1.7              readr_1.1.1               
-[37] magrittr_1.5               Rsamtools_1.26.2          
-[39] backports_1.1.1            htmltools_0.3.6           
-[41] BiocGenerics_0.20.0        GenomicRanges_1.26.4      
-[43] GenomicAlignments_1.10.1   assertthat_0.2.0          
-[45] SummarizedExperiment_1.4.0 stringi_1.1.5             
-[47] RCurl_1.95-4.8            </code></pre>
+ [1] Rcpp_0.12.13               bindr_0.1                 
+ [3] compiler_3.4.2             git2r_0.19.0              
+ [5] plyr_1.8.4                 GenomeInfoDb_1.10.3       
+ [7] XVector_0.14.1             bitops_1.0-6              
+ [9] tools_3.4.2                zlibbioc_1.20.0           
+[11] digest_0.6.12              lattice_0.20-35           
+[13] evaluate_0.10.1            tibble_1.3.4              
+[15] gtable_0.2.0               pkgconfig_2.0.1           
+[17] rlang_0.1.4                Matrix_1.2-11             
+[19] yaml_2.1.14                parallel_3.4.2            
+[21] dplyr_0.7.4                rtracklayer_1.34.2        
+[23] stringr_1.2.0              knitr_1.17                
+[25] hms_0.3                    Biostrings_2.42.1         
+[27] S4Vectors_0.12.2           IRanges_2.8.2             
+[29] stats4_3.4.2               rprojroot_1.2             
+[31] grid_3.4.2                 glue_1.2.0                
+[33] Biobase_2.34.0             R6_2.2.2                  
+[35] XML_3.98-1.9               BiocParallel_1.8.2        
+[37] rmarkdown_1.7              readr_1.1.1               
+[39] magrittr_1.5               GenomicAlignments_1.10.1  
+[41] backports_1.1.1            scales_0.5.0              
+[43] Rsamtools_1.26.2           htmltools_0.3.6           
+[45] BiocGenerics_0.20.0        GenomicRanges_1.26.4      
+[47] assertthat_0.2.0           SummarizedExperiment_1.4.0
+[49] colorspace_1.3-2           labeling_0.3              
+[51] stringi_1.1.5              RCurl_1.95-4.8            
+[53] lazyeval_0.2.1             munsell_0.4.3             </code></pre>
 </div>
 
 <hr>
