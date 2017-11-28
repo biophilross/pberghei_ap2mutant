@@ -10,6 +10,7 @@ knitr::opts_chunk$set(
   tidy = FALSE,
   fig.path = paste0("figure/", knitr::current_input(), "/")
 )
+options(tz="America/CST6CDT")
 
 # ---- last-updated ----
 # Insert the date the file was last updated
@@ -29,6 +30,9 @@ if(requireNamespace("git2r", quietly = TRUE)) {
 }
 cat(sprintf("**Code version:** %s", code_version))
 rm(code_version)
+
+# ---- packages ----
+library(cowplot)
 
 # ---- session-info ----
 sessionInfo()

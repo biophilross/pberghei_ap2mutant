@@ -11,9 +11,9 @@
 
 <meta name="author" content="Philipp Ross" />
 
-<meta name="date" content="2017-11-13" />
+<meta name="date" content="2017-11-26" />
 
-<title>Motif search</title>
+<title>Motify search results</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -304,9 +304,9 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Motif search</h1>
+<h1 class="title toc-ignore">Motify search results</h1>
 <h4 class="author"><em>Philipp Ross</em></h4>
-<h4 class="date"><em>2017-11-13</em></h4>
+<h4 class="date"><em>2017-11-26</em></h4>
 
 </div>
 
@@ -323,138 +323,22 @@ shared across the workflowr files. -->
 <p><strong>Code version:</strong> 4d53c2e</p>
 <!-- packages -->
 <!-- custom defined functions -->
-<div id="overview" class="section level2">
-<h2>Overview</h2>
-</div>
-<div id="preperation" class="section level2">
-<h2>Preperation</h2>
-<p>What is the genome composition of <em>P. berghei</em>? The following command got me the result seen below:</p>
-<pre class="bash"><code>$ seqtk comp PlasmoDB-34_PbergheiANKA_Genome.fasta | awk &#39;BEGIN {l=0;A=0;C=0;G=0;T=0} {l=l+$2;A=A+$3;C=C+$4;G=G+$5;T=T+$6} END {print &quot;A: &quot;A/l&quot; C: &quot;C/l&quot; G: &quot;G/l&quot; T: &quot;T/l}&#39;
-
-A: 0.390528 C: 0.110397 G: 0.110028 T: 0.389048</code></pre>
-<p>Now let’s set promoter regions for all the genes we care about. First, we’ll import all genes, filter them, and create lists of genes we want to explore further.</p>
-<pre class="r"><code>gff &lt;- rtracklayer::import.gff3(&quot;../data/PlasmoDB-34_PbergheiANKA.gff&quot;)</code></pre>
-<pre><code>Warning in is.na(x[[i]]): is.na() applied to non-(list or vector) of type
-&#39;environment&#39;</code></pre>
-<pre><code>&#39;BiocParallel&#39; did not register default BiocParallelParams:
-  invalid class &quot;MulticoreParam&quot; object: 1: &#39;cluster&#39;, &#39;.clusterargs&#39;, &#39;.uid&#39;, &#39;RNGseed&#39; must be length 1
-invalid class &quot;MulticoreParam&quot; object: 2: &#39;.clusterargs&#39;, &#39;.controlled&#39;, &#39;logdir&#39;, &#39;resultdir&#39; must be length 1</code></pre>
-<pre class="r"><code>nuclear_chromosomes &lt;- c(&quot;PbANKA_01_v3&quot;,&quot;PbANKA_02_v3&quot;,&quot;PbANKA_03_v3&quot;,&quot;PbANKA_04_v3&quot;,
-                         &quot;PbANKA_05_v3&quot;,&quot;PbANKA_06_v3&quot;,&quot;PbANKA_07_v3&quot;,&quot;PbANKA_08_v3&quot;,
-                         &quot;PbANKA_09_v3&quot;,&quot;PbANKA_10_v3&quot;,&quot;PbANKA_11_v3&quot;,&quot;PbANKA_12_v3&quot;,
-                         &quot;PbANKA_13_v3&quot;,&quot;PbANKA_14_v3&quot;, &quot;PbANKA_00_v3_archived_contig_1&quot;,
-                         &quot;PbANKA_00_v3_archived_contig_2&quot;, &quot;PbANKA_00_v3_archived_contig_3&quot;,
-                         &quot;PbANKA_00_v3_archived_contig_4&quot;, &quot;PbANKA_00_v3_archived_contig_5&quot;)
-protein_coding_genes &lt;- unique(
-  unlist(
-    lapply(
-      stringr::str_split(
-        dplyr::filter(
-          tibble::as_tibble(gff),type==&quot;CDS&quot;,seqnames %in% nuclear_chromosomes)$ID,pattern=&quot;[.]&quot;),function(x) x[1])))</code></pre>
-<pre><code>Warning in as.data.frame(mcols(x), ...): Arguments in &#39;...&#39; ignored</code></pre>
-<pre class="r"><code>genes &lt;- GenomicRanges::GRanges(dplyr::filter(tibble::as_tibble(gff), type==&quot;gene&quot;, ID %in% protein_coding_genes))</code></pre>
-<pre><code>Warning in as.data.frame(mcols(x), ...): Arguments in &#39;...&#39; ignored</code></pre>
-<p>Now we’ll get promoter intervals:</p>
-<pre class="r"><code>proms &lt;- tibble::as_tibble(GenomicRanges::promoters(genes,upstream=1500,downstream=0))</code></pre>
-<pre><code>Warning in as.data.frame(mcols(x), ...): Arguments in &#39;...&#39; ignored</code></pre>
-<pre class="r"><code>proms$score &lt;- 1
-proms$start &lt;- proms$start - 1
-proms$start &lt;- ifelse(proms$start&lt;0,0,proms$start)
-proms &lt;- dplyr::select(proms,seqnames,start,end,ID,score,strand)
-proms &lt;- dplyr::rename(proms,name=ID)
-proms$start &lt;- as.integer(proms$start)
-readr::write_tsv(x=proms,path=&quot;../data/promoters_1500bps.bed&quot;,col_names=F)</code></pre>
-<p>Now use bedtools to generate strand-specific sequences:</p>
-<pre class="bash"><code>bedtools getfasta -fi PlasmoDB-34_PbergheiANKA_Genome.fasta -bed promoters_1500bps.bed -s -name &gt; promoters_1500bps.fasta</code></pre>
-<p>Unfortunately, I get the following error messages:</p>
-<pre class="bash"><code>Feature (PbANKA_01_v3:515305-516805) beyond the length of PbANKA_01_v3 size (515659 bp).  Skipping.
-Feature (PbANKA_10_v3:1639716-1641216) beyond the length of PbANKA_10_v3 size (1640193 bp).  Skipping.
-Feature (PbANKA_02_v3:621636-623136) beyond the length of PbANKA_02_v3 size (622508 bp).  Skipping.
-Feature (PbANKA_06_v3:983178-984678) beyond the length of PbANKA_06_v3 size (984266 bp).  Skipping.
-Feature (PbANKA_05_v3:930418-931918) beyond the length of PbANKA_05_v3 size (931174 bp).  Skipping.</code></pre>
-<p>I manually went back to correct these features in the original BED file and reran the previous command:</p>
-<pre class="bash"><code>bedtools getfasta -fi PlasmoDB-34_PbergheiANKA_Genome.fasta -bed promoters_1500bps_corrected.bed -s -name &gt; promoters_1500bps_corrected.fasta</code></pre>
-<p>No warnings this time!</p>
-<p>Finally, we can generate background models for these sequences:</p>
-<pre class="bash"><code>cat promoters_1500bps_corrected.fasta | fasta-get-markov -m 4 &gt; promoters_1500bps_corrected.background</code></pre>
-<p>Finally, we can search the sequences.</p>
-</div>
-<div id="search-sequences" class="section level2">
-<h2>Search sequences</h2>
-<p>We’ll use FIMO to search the promoter sequences:</p>
-<pre class="bash"><code>fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_genomic_1e4 --parse-genomic-coord --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta 
-
-fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_1e4 --thresh 1e-4 8mer_motifs.meme promoters_1500bps_corrected.fasta 
-
-fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_genomic_1e3 --parse-genomic-coord --thresh 1e-3 8mer_motifs.meme promoters_1500bps_corrected.fasta 
-
-fimo --bgfile promoters_1500bps_corrected.background --oc fimo_promoters_1500_1e3 --thresh 1e-3 8mer_motifs.meme promoters_1500bps_corrected.fasta </code></pre>
-<p>Now we can look at our genes of interest to see if there are any differences between the two motifs:</p>
-<pre class="r"><code># import differentially expressed gene list
-diff_reg &lt;- readr::read_tsv(&quot;../data/differentially_regulated.txt&quot;,col_names=F)$X1</code></pre>
-<pre><code>Parsed with column specification:
-cols(
-  X1 = col_character()
-)</code></pre>
-<pre class="r"><code># remove ribosomal RNA
-diff_reg &lt;- diff_reg[!diff_reg %in% &quot;PBANKA_0622941&quot;]
-#read in FIMO motif hits
-fimo &lt;- readr::read_tsv(&quot;../data/fimo_promoters_1500_1e3/fimo.txt&quot;,col_names=T)</code></pre>
-<pre><code>Parsed with column specification:
-cols(
-  `#pattern name` = col_character(),
-  `sequence name` = col_character(),
-  start = col_integer(),
-  stop = col_integer(),
-  strand = col_character(),
-  score = col_double(),
-  `p-value` = col_double(),
-  `q-value` = col_double(),
-  `matched sequence` = col_character()
-)</code></pre>
-<pre class="r"><code>fimo &lt;- dplyr::rename(fimo, pattern=`#pattern name`,seq=`sequence name`,matched=`matched sequence`)
-fimo$seq &lt;- unlist(lapply(stringr::str_split(string=fimo$seq,pattern=&quot;[::]&quot;),function(x) x[1]))
-# filter for hits within the genes we care about
-fimo_diff_reg &lt;- dplyr::filter(fimo, seq %in% diff_reg)</code></pre>
-<p>Now let’s compare the hits within the promoters of our genes of interest to the amount of motifs found in promoters throughout the rest of the genome:</p>
-<pre class="r"><code># make a histogram of the data
-hist(table(fimo$seq),breaks=20,col=&quot;grey&quot;,main=&quot;Motif Hits Per Promoter&quot;,xlab=&quot;Hits&quot;)
-abline(v=mean(table(fimo$seq)),col=&quot;green&quot;,lwd=2)
-abline(v=mean(table(fimo_diff_reg$seq)),col=&quot;blue&quot;,lwd=2)
-abline(v=max(table(fimo_diff_reg$seq)),col=&quot;red&quot;,lwd=2)</code></pre>
-<p><img src="figure/motif_search.Rmd/unnamed-chunk-10-1.png" width="672" style="display: block; margin: auto;" /></p>
+<!-- Add your analysis here -->
+<div id="figure-1" class="section level2">
+<h2>Figure 1</h2>
+<p>What do the hits within these genes look like if we compare it to hits within the rest of the genome?</p>
+<p><img src="figure/motif_search_results.Rmd/unnamed-chunk-1-1.png" width="672" style="display: block; margin: auto;" /></p>
 <p>Here, <strong>green</strong> is the average number of hits within the distribution, <strong>blue</strong> is the average number of hits within the differentially regulated genes, and <strong>red</strong> is the gene with the maximum number of motif hits within the differentially expressed gene set.</p>
-<p>Let’s save that to a file.</p>
-<pre class="r"><code># show data and write it to a file
-fimo_diff_reg</code></pre>
-<pre><code># A tibble: 274 x 9
-    pattern            seq start  stop strand   score `p-value` `q-value`
-      &lt;chr&gt;          &lt;chr&gt; &lt;int&gt; &lt;int&gt;  &lt;chr&gt;   &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
- 1 GGGACTTA PBANKA_0722700   247   254      + 14.8041  5.97e-06     0.387
- 2 GGGACTTA PBANKA_1200091   185   192      - 14.7938  8.65e-06     0.387
- 3 GGGACTTA PBANKA_0836800   214   221      - 14.2165  1.04e-05     0.387
- 4 GGGCTTAA PBANKA_0200500   732   739      + 14.0206  1.13e-05     0.468
- 5 GGGACTTA PBANKA_0100021   232   239      + 12.1959  1.17e-05     0.387
- 6 GGGACTTA PBANKA_0317161   882   889      + 12.1959  1.17e-05     0.387
- 7 GGGACTTA PBANKA_0943900   297   304      - 11.6186  1.41e-05     0.400
- 8 GGGACTTA PBANKA_1040521   497   504      + 10.5361  2.62e-05     0.523
- 9 GGGCTTAA PBANKA_0100021   233   240      + 11.7113  3.00e-05     0.576
-10 GGGCTTAA PBANKA_0700041   768   775      + 11.7010  3.27e-05     0.576
-# ... with 264 more rows, and 1 more variables: matched &lt;chr&gt;</code></pre>
-<pre class="r"><code>readr::write_tsv(x=fimo_diff_reg,path=&quot;../data/fimo_differentially_expressed.tsv&quot;)</code></pre>
 </div>
-<div id="how-does-this-compare-to-some-kind-of-background" class="section level2">
-<h2>How does this compare to some kind of background?</h2>
-<pre class="r"><code># sample from our genes to compare to our differentially expressed set of genes
-rt &lt;- tibble::tibble(Var1=character(),n=integer())
-for (i in 1:1000) {
-  s &lt;- sample(x=protein_coding_genes[!protein_coding_genes %in% diff_reg],size=45,replace=F)
-  t &lt;- dplyr::filter(fimo, seq %in% s)
-  rt &lt;- dplyr::bind_rows(rt,tibble::as_tibble(table(t$pattern)))
-}
-
-ggplot(rt,aes(x=Var1,y=n)) + geom_boxplot() + geom_hline(yintercept=135,col=&quot;blue&quot;) + geom_hline(yintercept=139,col=&quot;red&quot;)</code></pre>
-<p><img src="figure/motif_search.Rmd/unnamed-chunk-12-1.png" width="672" style="display: block; margin: auto;" /></p>
+<div id="figure-2" class="section level2">
+<h2>Figure 2</h2>
+<p>If we randomly samply promoters are these motifs over or under represented within our promoters of interest?</p>
+<p><img src="figure/motif_search_results.Rmd/unnamed-chunk-2-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Here, <strong>red</strong> represents the number of times <strong>GGGCTTAA</strong> is found within our differentially expressed gene set, while <strong>blue</strong> represents the number of times <strong>GGGACTTA</strong> is found within our differentially expressed gene set.</p>
+</div>
+<div id="figure-3" class="section level2">
+<h2>Figure 3</h2>
+<p>Still to come.</p>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session information</h2>

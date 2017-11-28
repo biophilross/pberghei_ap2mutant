@@ -1,0 +1,112 @@
+---
+title: "Motify search results"
+author: "Philipp Ross"
+date: 2017-11-26
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- The file analysis/chunks.R contains chunks that define default settings
+shared across the workflowr files. -->
+```{r read-chunk, include=FALSE, cache=FALSE}
+knitr::read_chunk("chunks.R")
+```
+
+<!-- Update knitr chunk options -->
+```{r knitr-opts-chunk, include=FALSE}
+```
+
+<!-- Insert the date the file was last updated -->
+```{r last-updated, echo=FALSE, results='asis'}
+```
+
+<!-- Insert the code version (Git commit SHA1) if Git repository exists and R
+ package git2r is installed -->
+```{r code-version, echo=FALSE, results='asis'}
+```
+
+<!-- packages -->
+```{r packages, echo=FALSE, include=FALSE}
+```
+
+<!-- custom defined functions -->
+```{r custom-functions, echo=FALSE}
+```
+
+<!-- Add your analysis here -->
+
+```{r import-data,echo=F,include=F}
+gff <- rtracklayer::import.gff3("../data/PlasmoDB-34_PbergheiANKA.gff")
+nuclear_chromosomes <- c("PbANKA_01_v3","PbANKA_02_v3","PbANKA_03_v3","PbANKA_04_v3",
+                         "PbANKA_05_v3","PbANKA_06_v3","PbANKA_07_v3","PbANKA_08_v3",
+                         "PbANKA_09_v3","PbANKA_10_v3","PbANKA_11_v3","PbANKA_12_v3",
+                         "PbANKA_13_v3","PbANKA_14_v3", "PbANKA_00_v3_archived_contig_1",
+                         "PbANKA_00_v3_archived_contig_2", "PbANKA_00_v3_archived_contig_3",
+                         "PbANKA_00_v3_archived_contig_4", "PbANKA_00_v3_archived_contig_5")
+protein_coding_genes <- unique(
+  unlist(
+    lapply(
+      stringr::str_split(
+        dplyr::filter(
+          tibble::as_tibble(gff),type=="CDS",seqnames %in% nuclear_chromosomes)$ID,pattern="[.]"),function(x) x[1])))
+genes <- GenomicRanges::GRanges(dplyr::filter(tibble::as_tibble(gff), type=="gene", ID %in% protein_coding_genes))
+
+# import differentially expressed gene list
+diff_reg <- readr::read_tsv("../data/differentially_regulated.txt",col_names=F)$X1
+# remove ribosomal RNA
+diff_reg <- diff_reg[!diff_reg %in% "PBANKA_0622941"]
+#read in FIMO motif hits
+fimo <- readr::read_tsv("../data/fimo_promoters_1500_1e3/fimo.txt",col_names=T)
+fimo <- dplyr::rename(fimo, pattern=`#pattern name`,seq=`sequence name`,matched=`matched sequence`)
+fimo$seq <- unlist(lapply(stringr::str_split(string=fimo$seq,pattern="[::]"),function(x) x[1]))
+# filter for hits within the genes we care about
+fimo_diff_reg <- dplyr::filter(fimo, seq %in% diff_reg)
+```
+
+## Figure 1
+
+What do the hits within these genes look like if we compare it to hits within the rest of the genome?
+
+```{r,echo=F}
+hist(table(fimo$seq),breaks=20,col="grey",main="Motif Hits Per Promoter",xlab="Hits")
+abline(v=mean(table(fimo$seq)),col="green",lwd=2)
+abline(v=mean(table(fimo_diff_reg$seq)),col="blue",lwd=2)
+abline(v=max(table(fimo_diff_reg$seq)),col="red",lwd=2)
+```
+
+Here, **green** is the average number of hits within the distribution, **blue** is the average number of hits within the differentially regulated genes, and **red** is the gene with the maximum number of motif hits within the differentially expressed gene set.
+
+## Figure 2
+
+If we randomly samply promoters are these motifs over or under represented within our promoters of interest?
+
+```{r,echo=F}
+# sample from our genes to compare to our differentially expressed set of genes
+rt <- tibble::tibble(Var1=character(),n=integer())
+for (i in 1:1000) {
+  s <- sample(x=protein_coding_genes[!protein_coding_genes %in% diff_reg],size=45,replace=F)
+  t <- dplyr::filter(fimo, seq %in% s)
+  rt <- dplyr::bind_rows(rt,tibble::as_tibble(table(t$pattern)))
+}
+
+ggplot(rt,aes(x=Var1,y=n)) + 
+  geom_boxplot() + 
+  geom_point(aes(x="GGGACTTA",y=135),color="blue",size=4) +
+  geom_point(aes(x="GGGCTTAA",y=139),color="red",size=4) +
+  xlab("") + 
+  ylab("Hit Frequency") + 
+  ggtitle("Motif Hits per 45\nRandomly Sampled Promoters")
+```
+
+Here, **red** represents the number of times **GGGCTTAA** is found within our differentially expressed gene set, while **blue** represents the number of times **GGGACTTA** is found within our differentially expressed gene set.
+
+## Figure 3
+
+Still to come.
+
+## Session information
+
+<!-- Insert the session information into the document -->
+```{r session-info}
+```

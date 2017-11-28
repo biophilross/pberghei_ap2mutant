@@ -1,5 +1,5 @@
 ---
-title: "Motif analysis"
+title: "Motif search"
 author: "Philipp Ross"
 date: 2017-11-13
 output: html_document

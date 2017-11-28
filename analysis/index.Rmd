@@ -9,4 +9,6 @@ Motif analysis of a polymorphic ApiAP2 protein.
 
 ## Motif search
 
-### [Results](motif_search.html)
+### [Analysus](motif_search.html)
+
+### [Results](motif_search_results.html)
