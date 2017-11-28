@@ -33,6 +33,7 @@ rm(code_version)
 
 # ---- packages ----
 library(cowplot)
+library(DT)
 
 # ---- session-info ----
 sessionInfo()

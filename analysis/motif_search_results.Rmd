@@ -62,6 +62,10 @@ fimo <- dplyr::rename(fimo, pattern=`#pattern name`,seq=`sequence name`,matched=
 fimo$seq <- unlist(lapply(stringr::str_split(string=fimo$seq,pattern="[::]"),function(x) x[1]))
 # filter for hits within the genes we care about
 fimo_diff_reg <- dplyr::filter(fimo, seq %in% diff_reg)
+
+# write these to output
+readr::write_tsv(x=fimo,path="../output/fimo_results_v1.tsv")
+readr::write_tsv(x=fimo_diff_reg,path="../output/fimo_results_differentially_expressed_v1.tsv")
 ```
 
 ## Figure 1
@@ -104,6 +108,17 @@ Here, **red** represents the number of times **GGGCTTAA** is found within our di
 ## Figure 3
 
 Still to come.
+
+## Data
+
+```{r,echo=F}
+datatable(
+  fimo_diff_reg, extensions = 'Buttons', options = list(
+    dom = 'Bfrtip',
+    buttons = c('copy', 'csv')
+  )
+)
+```
 
 ## Session information
 
