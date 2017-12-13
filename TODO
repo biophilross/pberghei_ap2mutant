@@ -1,0 +1,9 @@
+TODO
+
+## Build the files in the correct order
+
+The "motif_search.Rmd" file should be built before the "motif_search_results.Rmd" file. Right now it doesn't always build it in order. Should fix this somehow.
+
+## Make downloading the raw data available through GitHub
+
+The entire FIMO results file is too large for DataTable to display and thus it can't be downloaded. I should figure out a way to make this available.

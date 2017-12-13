@@ -107,7 +107,40 @@ Here, **red** represents the number of times **GGGCTTAA** is found within our di
 
 ## Figure 3
 
-Still to come.
+If we look at the sequences that were matched in the promoters of the identified differentially expressed genes, what does the sequence logo look like if we stacked those sequences on top of one another?
+
+```{r,echo=F}
+num_seqs <- length(fimo_diff_reg$matched)
+
+# calculate the proportion of nucleotides at each position
+pwm <- tibble::tibble(pos=integer(),A=integer(),C=integer(),G=integer(),T=integer())
+
+for (i in 1:8) {
+  
+    As <- sum(unlist(lapply(stringr::str_split(fimo_diff_reg$matched,pattern=""), 
+                 function(x) {x[i] == "A"})))
+    Cs <- sum(unlist(lapply(stringr::str_split(fimo_diff_reg$matched,pattern=""), 
+                 function(x) {x[i] == "C"})))
+    Ts <- sum(unlist(lapply(stringr::str_split(fimo_diff_reg$matched,pattern=""), 
+                 function(x) {x[i] == "T"})))
+    Gs <- sum(unlist(lapply(stringr::str_split(fimo_diff_reg$matched,pattern=""), 
+                 function(x) {x[i] == "G"})))
+  
+  pwm <- dplyr::bind_rows(pwm, tibble::tibble(pos=i,A=As/num_seqs,C=Cs/num_seqs,G=Gs/num_seqs,T=Ts/num_seqs))
+}
+
+cols1 <- RColorBrewer::brewer.pal(4,"Paired")
+color_profile <- list("type" = "per_row","col" = c("#E41A1C", "#377EB8", "#F0E442", "#4DAF4A"))
+
+logo <- pwm[,2:5]
+p <- slot(seqLogo::makePWM(t(logo)),name="pwm")
+Logolas::nlogomaker(p,
+                    color_profile=color_profile,
+                    logoheight="log",
+                    pop_name="Enrichment-Depletion Logo",
+                    bg=c(0.390528,0.110397,0.389048,0.110028),
+                    frame_width=1)
+```
 
 ## Data
 
