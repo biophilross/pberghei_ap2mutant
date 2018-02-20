@@ -32,8 +32,8 @@ cat(sprintf("**Code version:** %s", code_version))
 rm(code_version)
 
 # ---- packages ----
+library(ggplot2)
 library(cowplot)
-library(DT)
 
 # ---- session-info ----
 sessionInfo()
