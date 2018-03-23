@@ -119,8 +119,10 @@ fimo_boxplot <- function(fimo_list) {
     xlab("") + 
     ylab("Hit Frequency") + 
     ggtitle("Motif Hits per 45\nRandomly Sampled Promoters")
+
 }
 
+set.seed(13)
 fimo_boxplot(fimo_4mer) + xlab("4mer")
 fimo_boxplot(fimo_6mer) + xlab("6mer")
 fimo_boxplot(fimo_8mer) + xlab("8mer")
